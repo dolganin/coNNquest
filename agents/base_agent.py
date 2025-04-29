@@ -1,3 +1,7 @@
-class BaseAgent:
+from abc import ABC, abstractmethod
+
+class BaseAgent(ABC):
+    @abstractmethod
     def get_action(self, state):
-        raise NotImplementedError("Each agent must implement the get_action method.")
+        """Должен вернуть действие на основе состояния."""
+        pass

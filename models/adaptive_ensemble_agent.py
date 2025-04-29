@@ -1,17 +1,28 @@
 import numpy as np
 import onnxruntime as ort
-from abc import ABC
+import logging
+from abc import ABC, abstractmethod
 
 class AdaptiveEnsembleAgent(ABC):
     def __init__(self, stormtrooper_model_path, pacifist_model_path, balanced_model_path,
                  d_min=0.0, d_max=10.0, v_min=0.0, v_max=5.0, p_min=0.0, p_max=50.0):
-        self.stormtrooper_sess = ort.InferenceSession(stormtrooper_model_path)
-        self.pacifist_sess = ort.InferenceSession(pacifist_model_path)
-        self.balanced_sess = ort.InferenceSession(balanced_model_path)
+        
+        self.logger = logging.getLogger("ENSEMBLE")
 
-        self.stormtrooper_input = self.stormtrooper_sess.get_inputs()[0].name
-        self.pacifist_input = self.pacifist_sess.get_inputs()[0].name
-        self.balanced_input = self.balanced_sess.get_inputs()[0].name
+        try:
+            self.stormtrooper_sess = ort.InferenceSession(stormtrooper_model_path)
+            self.pacifist_sess = ort.InferenceSession(pacifist_model_path)
+            self.balanced_sess = ort.InferenceSession(balanced_model_path)
+
+            self.stormtrooper_input = self.stormtrooper_sess.get_inputs()[0].name
+            self.pacifist_input = self.pacifist_sess.get_inputs()[0].name
+            self.balanced_input = self.balanced_sess.get_inputs()[0].name
+
+            self.logger.info("[ENSEMBLE] ONNX-модели успешно загружены.")
+
+        except Exception as e:
+            self.logger.critical(f"[ENSEMBLE] Ошибка загрузки моделей: {e}")
+            raise
 
         self.deaths = 0
         self.total_distance = 0.0
@@ -28,16 +39,19 @@ class AdaptiveEnsembleAgent(ABC):
         self.total_damage += damage
         if alive:
             self.total_time += 1
+        self.logger.debug(f"[ENSEMBLE] Лог шага: расстояние={moved_distance}, урон={damage}, живой={alive}")
 
     def log_death(self):
         self.deaths += 1
         self.episodes += 1
+        self.logger.info(f"[ENSEMBLE] Лог смерти: всего смертей={self.deaths}, эпизодов={self.episodes}")
 
     def _normalize(self, x, x_min, x_max):
         return (x - x_min) / (x_max - x_min + 1e-8)
 
     def _compute_weights(self):
-        if self.episodes == 0:  # Если статистика пустая -> пацифизм
+        if self.episodes == 0:
+            self.logger.info("[ENSEMBLE] Нет статистики: используем полное пацифистское поведение.")
             return 1.0, 0.0, 0.0
 
         d = self.deaths / max(1, self.episodes)
@@ -55,6 +69,9 @@ class AdaptiveEnsembleAgent(ABC):
         scores = np.array([S_p, S_s, S_sr])
         exp_scores = np.exp(scores)
         weights = exp_scores / np.sum(exp_scores)
+
+        self.logger.debug(f"[ENSEMBLE] Расчёт весов: пацифист={weights[0]:.3f}, сбалансированный={weights[1]:.3f}, штурмовик={weights[2]:.3f}")
+
         return weights  # w_p, w_s, w_sr
 
     def _onnx_inference(self, session, input_name, state):
@@ -71,4 +88,6 @@ class AdaptiveEnsembleAgent(ABC):
 
         final_probs = w_p * np.array(prob_p) + w_s * np.array(prob_s) + w_sr * np.array(prob_sr)
         selected_action_idx = int(np.argmax(final_probs))
+
+        self.logger.debug(f"[ENSEMBLE] Выбрано действие: индекс={selected_action_idx}")
         return selected_action_idx
