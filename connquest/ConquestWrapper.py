@@ -1,9 +1,12 @@
 import random
 import yaml
+import logging
 from vizdoom import (
     DoomGame, GameVariable, Button, Mode,
     ScreenResolution, ScreenFormat
 )
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 class ConNquestEnv:
     def __init__(self, cfg_path):
@@ -44,6 +47,7 @@ class ConNquestEnv:
     def reset(self):
         self.game.new_episode()
         self._reset_state()
+        logging.info("=== Новый эпизод начат ===")
         return self.game.get_state().screen_buffer
 
     def _pick_spots(self, ring, n):
@@ -84,44 +88,52 @@ class ConNquestEnv:
             weights = [1 + (i // len(pool) + 1 == tier) * C['wave']['tier_bonus'] for i in range(len(pool))]
             mobs = self._weighted_sample(pool, weights, max_mobs)
 
+        logging.info(f"[Волна {w}] Призыв врагов: {mobs}")
+
         total_hp = sum(C['monster_hp'][m] for m in mobs)
         ammo_potential = 0
-        for wp in C['weapons'][f"tier{min((w+1)//C['wave']['weap_step'], tier)}"]:
+        wtier = min((w + 1) // C['wave']['weap_step'], tier)
+        new_weaps = C['weapons'][f"tier{wtier}"]
+        for wp in new_weaps:
             ainfo = C['ammo'].get(wp)
-            if ainfo:
+            if ainfo and ainfo['type']:
                 ammo_potential += ainfo['packs'] * ainfo['min_damage']
+        logging.info(f"[Волна {w}] Всего HP врагов: {total_hp}, потенциальный урон из боезапаса: {ammo_potential}")
         if ammo_potential < total_hp:
             deficit = total_hp - ammo_potential
             packs = max(1, deficit // C['wave']['extra_pack_damage'])
             for _ in range(packs):
                 spot = self._pick_spots(True, 1)[0]
                 self.game.send_game_command(f"give {C['wave']['extra_ammo_type']} {spot}")
+            logging.info(f"[Волна {w}] Добавлено {packs} экстренных патронов")
 
         for m, s in zip(mobs, self._pick_spots(False, len(mobs))):
             self.game.send_game_command(f"summon {m} {s}")
 
-        wtier = min((w + 1) // C['wave']['weap_step'], tier)
-        new_weaps = C['weapons'][f"tier{wtier}"]
         for wp, s in zip(new_weaps, self._pick_spots(True, len(new_weaps))):
             self.game.send_game_command(f"give {wp} {s}")
+        logging.info(f"[Волна {w}] Выдано оружие: {new_weaps}")
 
         ammo = []
         for wp in new_weaps:
-            a = C['ammo'][wp]['type']
-            p = C['ammo'][wp]['packs']
-            ammo += [a] * p
+            ainfo = C['ammo'].get(wp)
+            if ainfo and ainfo['type']:
+                ammo += [ainfo['type']] * ainfo['packs']
         for a, s in zip(ammo, self._pick_spots(True, len(ammo))):
             self.game.send_game_command(f"give {a} {s}")
+        logging.info(f"[Волна {w}] Выдано патронов: {len(ammo)} шт.")
 
         if w % C['wave']['health_interval'] == 0:
             H = random.sample(C['health'], C['wave']['health_count'])
             A = random.sample(C['armor'], C['wave']['armor_count'])
             for it, s in zip(H + A, self._pick_spots(False, len(H + A))):
                 self.game.send_game_command(f"give {it} {s}")
+            logging.info(f"[Волна {w}] Хил и броня выданы")
 
         if w % C['wave']['backpack_interval'] == 0:
             s = self._pick_spots(True, 1)[0]
             self.game.send_game_command(f"give Backpack {s}")
+            logging.info(f"[Волна {w}] Выдан рюкзак")
 
         self.wave += 1
 
