@@ -46,6 +46,7 @@ class ConNquestEnv:
 
     def reset(self):
         self.game.new_episode()
+        self.game.send_game_command("removeall")
         self._reset_state()
         logging.info("=== Новый эпизод начат ===")
         return self.game.get_state().screen_buffer
@@ -105,14 +106,15 @@ class ConNquestEnv:
             for _ in range(packs):
                 spot = self._pick_spots(True, 1)[0]
                 self.game.send_game_command(f"give {C['wave']['extra_ammo_type']} {spot}")
-            logging.info(f"[Волна {w}] Добавлено {packs} экстренных патронов")
+                logging.info(f"[Волна {w}] Добавлен экстренный патрон в точку {spot}")
 
         for m, s in zip(mobs, self._pick_spots(False, len(mobs))):
             self.game.send_game_command(f"summon {m} {s}")
+            logging.info(f"[Волна {w}] Призван {m} в точку {s}")
 
         for wp, s in zip(new_weaps, self._pick_spots(True, len(new_weaps))):
             self.game.send_game_command(f"give {wp} {s}")
-        logging.info(f"[Волна {w}] Выдано оружие: {new_weaps}")
+            logging.info(f"[Волна {w}] Выдано оружие {wp} в точку {s}")
 
         ammo = []
         for wp in new_weaps:
@@ -121,19 +123,19 @@ class ConNquestEnv:
                 ammo += [ainfo['type']] * ainfo['packs']
         for a, s in zip(ammo, self._pick_spots(True, len(ammo))):
             self.game.send_game_command(f"give {a} {s}")
-        logging.info(f"[Волна {w}] Выдано патронов: {len(ammo)} шт.")
+            logging.info(f"[Волна {w}] Патрон {a} в точку {s}")
 
         if w % C['wave']['health_interval'] == 0:
             H = random.sample(C['health'], C['wave']['health_count'])
             A = random.sample(C['armor'], C['wave']['armor_count'])
             for it, s in zip(H + A, self._pick_spots(False, len(H + A))):
                 self.game.send_game_command(f"give {it} {s}")
-            logging.info(f"[Волна {w}] Хил и броня выданы")
+                logging.info(f"[Волна {w}] Выдано {it} в точку {s}")
 
         if w % C['wave']['backpack_interval'] == 0:
             s = self._pick_spots(True, 1)[0]
             self.game.send_game_command(f"give Backpack {s}")
-            logging.info(f"[Волна {w}] Выдан рюкзак")
+            logging.info(f"[Волна {w}] Выдан рюкзак в точку {s}")
 
         self.wave += 1
 
