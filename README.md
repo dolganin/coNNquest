@@ -45,7 +45,7 @@
 | Превью |     |     |
 |--------|-----|-----|
 | ![screen1](images/screen1.png) | ![screen2](images/screen2.png) | ![screen3](images/screen3.png) |
-| ![screen4](images/screen4.png) | ![screen5](images/screen5.png) |     |
+| ![screen4](images/screen4.png) | ![screen5](images/screen5.png) | ![screen5](images/screen6.png) |
 
 ## Структура проекта
 
