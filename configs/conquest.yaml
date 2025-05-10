@@ -1,0 +1,108 @@
+game:
+  wad: "ConNquest.wad"
+  map: "MAP01"
+  seed: 42
+  frame_repeat: 4
+  start_health: 100
+  window_visible: true
+  screen_resolution: "RES_320X240"
+  screen_format: "CRCGCB"
+  render_hud: true
+  render_crosshair: true
+  render_weapon: true
+  render_decals: false
+  render_particles: false
+  episode_start_time: 0
+  episode_timeout: 5000
+  mode: "PLAYER"
+  available_buttons:
+    - MOVE_LEFT
+    - MOVE_RIGHT
+    - MOVE_FORWARD
+    - MOVE_BACKWARD
+    - TURN_LEFT
+    - TURN_RIGHT
+    - ATTACK
+    - SPEED
+    - SELECT_NEXT_WEAPON
+    - SELECT_PREV_WEAPON
+  available_game_variables:
+    - AMMO0
+    - AMMO1
+    - AMMO2
+    - HEALTH
+    - ARMOR
+
+spots:
+  near: [41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56]
+  ring: [7,8,9,10,11,12,13,14,15,22,23,24,25,26,27,28,29,57,58,59,60]
+  far: [1,2,3,4,5,6,16,17,18,19,20,21,30,31,32,33,34,35,36,37,38,39,40]
+
+monsters:
+  tier1: ["Zombieman"]
+  tier2: ["ShotgunGuy","Imp"]
+  tier3: ["Demon","Spectre","LostSoul"]
+  tier4: ["Cacodemon","HellKnight","Revenant"]
+  tier5: ["Arachnotron","Mancubus","PainElemental"]
+  tier6: ["BaronOfHell","Archvile"]
+
+monster_hp:
+  Zombieman: 20
+  ShotgunGuy: 30
+  Imp: 60
+  LostSoul: 100
+  Demon: 150
+  Spectre: 150
+  Cacodemon: 400
+  HellKnight: 500
+  Revenant: 300
+  Arachnotron: 500
+  Mancubus: 600
+  PainElemental: 400
+  BaronOfHell: 1000
+  Archvile: 700
+
+weapons:
+  tier0: ["Fist"]
+  tier1: ["Chainsaw","Pistol"]
+  tier2: ["Shotgun"]
+  tier3: ["SuperShotgun"]
+  tier4: ["Chaingun","RocketLauncher"]
+  tier5: ["PlasmaRifle"]
+  tier6: ["BFG9000"]
+
+ammo:
+  Pistol:        {type: "Clip",      packs: 4, min_damage: 5}
+  Shotgun:       {type: "ShellBox",  packs: 3, min_damage: 35}
+  SuperShotgun:  {type: "ShellBox",  packs: 4, min_damage: 105}
+  Chaingun:      {type: "BulletBox", packs: 3, min_damage: 5}
+  RocketLauncher:{type: "RocketBox", packs: 2, min_damage: 20}
+  PlasmaRifle:   {type: "CellPack",  packs: 2, min_damage: 5}
+  BFG9000:       {type: "CellPack",  packs: 4, min_damage: 100}
+
+health: ["Stimpack","Medikit","SoulSphere"]
+armor:  ["GreenArmor","BlueArmor","Megasphere"]
+
+wave:
+  waves_per_tier: 5
+  init_mobs: 6
+  mobs_per_wave: 2
+  max_mobs: 60
+  tier_bonus: 2
+  weap_step: 4
+  health_interval: 3
+  health_count: 2
+  armor_count: 1
+  initial_far: 8
+  extra_far: 8
+  backpack_interval: 10
+  extra_ammo_type: "CellPack"
+  extra_pack_damage: 200
+
+rewards:
+  killing_reward:   0.9
+  item:   0.5
+  health: 0.1
+  wave:   10.0
+  living_reward: 0.9
+  death_penalty: 0.9
