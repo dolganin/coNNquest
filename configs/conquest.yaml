@@ -75,13 +75,34 @@ weapons:
   tier6: ["BFG9000"]
 
 ammo:
-  Pistol:        {type: "Clip",      packs: 4, min_damage: 5}
-  Shotgun:       {type: "ShellBox",  packs: 3, min_damage: 35}
-  SuperShotgun:  {type: "ShellBox",  packs: 4, min_damage: 105}
-  Chaingun:      {type: "BulletBox", packs: 3, min_damage: 5}
-  RocketLauncher:{type: "RocketBox", packs: 2, min_damage: 20}
-  PlasmaRifle:   {type: "CellPack",  packs: 2, min_damage: 5}
-  BFG9000:       {type: "CellPack",  packs: 4, min_damage: 100}
+  Pistol:
+    type: Clip
+    packs: 4
+    min_damage: 5
+  Shotgun:
+    type: ShellBox
+    packs: 3
+    min_damage: 35
+  SuperShotgun:
+    type: ShellBox
+    packs: 4
+    min_damage: 105
+  Chaingun:
+    type: BulletBox
+    packs: 3
+    min_damage: 5
+  RocketLauncher:
+    type: RocketBox
+    packs: 2
+    min_damage: 20
+  PlasmaRifle:
+    type: CellPack
+    packs: 2
+    min_damage: 5
+  BFG9000:
+    type: CellPack
+    packs: 4
+    min_damage: 100
 
 health: ["Stimpack","Medikit","SoulSphere"]
 armor:  ["GreenArmor","BlueArmor","Megasphere"]
