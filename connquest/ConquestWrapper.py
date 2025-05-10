@@ -51,44 +51,22 @@ class ConNquestEnv:
         logging.info("=== Новый эпизод начат ===")
         return self.game.get_state().screen_buffer
 
-    def _pick_spots(self, ring, n):
-        spots = self.cfg['spots']['ring'] if ring else self.cfg['spots']['far']
-        if not ring:
-            init = self.cfg['wave']['initial_far']
-            extra = (self.wave // self.cfg['wave']['waves_per_tier']) * self.cfg['wave']['extra_far']
-            avail = min(init + extra, len(spots))
-            spots = spots[:avail]
+    def _pick_spots(self, zone, n):
+        spots = self.cfg['spots'][zone]
         return random.sample(spots, min(n, len(spots)))
-
-    def _weighted_sample(self, pool, weights, k):
-        pick = []
-        for _ in range(min(k, len(pool))):
-            s = sum(weights)
-            r = random.uniform(0, s)
-            for i, w in enumerate(weights):
-                r -= w
-                if r <= 0:
-                    pick.append(pool.pop(i))
-                    weights.pop(i)
-                    break
-        return pick
 
     def spawn_wave(self):
         w, C = self.wave, self.cfg
         tier = min(w // C['wave']['waves_per_tier'] + 1, len(C['monsters']))
-        max_mobs = min(C['wave']['init_mobs'] + w * C['wave']['mobs_per_wave'], C['wave']['max_mobs'])
+        max_mobs = min(C['wave']['init_mobs'] + w * 3, C['wave']['max_mobs'])
 
-        dist_type = self.cfg.get("distribution", {}).get("type", "weighted")
-        pool = []
+        template = []
         for t in range(1, tier + 1):
-            pool += C['monsters'][f"tier{t}"]
-
-        if dist_type == "uniform":
-            mobs = random.sample(pool, min(max_mobs, len(pool)))
-        else:
-            weights = [1 + (i // len(pool) + 1 == tier) * C['wave']['tier_bonus'] for i in range(len(pool))]
-            mobs = self._weighted_sample(pool, weights, max_mobs)
-
+            moblist = C['monsters'][f"tier{t}"]
+            count = int(max_mobs * (0.2 if t < tier else 0.4))
+            template += random.choices(moblist, k=count)
+        template = template[:max_mobs]
+        mobs = template or ["Zombieman"]
         logging.info(f"[Волна {w}] Призыв врагов: {mobs}")
 
         total_hp = sum(C['monster_hp'][m] for m in mobs)
@@ -99,45 +77,54 @@ class ConNquestEnv:
             ainfo = C['ammo'].get(wp)
             if ainfo and ainfo['type']:
                 ammo_potential += ainfo['packs'] * ainfo['min_damage']
-        logging.info(f"[Волна {w}] Всего HP врагов: {total_hp}, потенциальный урон из боезапаса: {ammo_potential}")
+        logging.info(f"[Волна {w}] HP врагов: {total_hp}, потенциальный урон: {ammo_potential}")
+
         if ammo_potential < total_hp:
             deficit = total_hp - ammo_potential
             packs = max(1, deficit // C['wave']['extra_pack_damage'])
             for _ in range(packs):
-                spot = self._pick_spots(True, 1)[0]
+                spot = self._pick_spots("ring", 1)[0]
                 self.game.send_game_command(f"give {C['wave']['extra_ammo_type']} {spot}")
                 logging.info(f"[Волна {w}] Добавлен экстренный патрон в точку {spot}")
 
-        for m, s in zip(mobs, self._pick_spots(False, len(mobs))):
+        zones = (["near"] * (len(mobs) // 2 + 1) +
+                 ["ring"] * (len(mobs) // 3) +
+                 ["far"] * (len(mobs) - len(mobs) // 2 - len(mobs) // 3))
+        random.shuffle(zones)
+        for m, z in zip(mobs, zones):
+            s = self._pick_spots(z, 1)[0]
             self.game.send_game_command(f"summon {m} {s}")
-            logging.info(f"[Волна {w}] Призван {m} в точку {s}")
+            logging.info(f"[Волна {w}] {m} в точке {z}: {s}")
 
-        for wp, s in zip(new_weaps, self._pick_spots(True, len(new_weaps))):
+        # Оружие и патроны в зоне near
+        near_weap_spots = self._pick_spots("near", len(new_weaps))
+        for wp, s in zip(new_weaps, near_weap_spots):
             self.game.send_game_command(f"give {wp} {s}")
-            logging.info(f"[Волна {w}] Выдано оружие {wp} в точку {s}")
+            logging.info(f"[Волна {w}] Выдано оружие {wp} в точке near: {s}")
 
         ammo = []
         for wp in new_weaps:
             ainfo = C['ammo'].get(wp)
             if ainfo and ainfo['type']:
                 ammo += [ainfo['type']] * ainfo['packs']
-        for a, s in zip(ammo, self._pick_spots(True, len(ammo))):
+        for a, s in zip(ammo, self._pick_spots("near", len(ammo))):
             self.game.send_game_command(f"give {a} {s}")
-            logging.info(f"[Волна {w}] Патрон {a} в точку {s}")
+            logging.info(f"[Волна {w}] Патрон {a} в точке near: {s}")
 
         if w % C['wave']['health_interval'] == 0:
             H = random.sample(C['health'], C['wave']['health_count'])
             A = random.sample(C['armor'], C['wave']['armor_count'])
-            for it, s in zip(H + A, self._pick_spots(False, len(H + A))):
+            for it, s in zip(H + A, self._pick_spots("far", len(H + A))):
                 self.game.send_game_command(f"give {it} {s}")
-                logging.info(f"[Волна {w}] Выдано {it} в точку {s}")
+                logging.info(f"[Волна {w}] Выдано {it} в точке {s}")
 
         if w % C['wave']['backpack_interval'] == 0:
-            s = self._pick_spots(True, 1)[0]
+            s = self._pick_spots("ring", 1)[0]
             self.game.send_game_command(f"give Backpack {s}")
-            logging.info(f"[Волна {w}] Выдан рюкзак в точку {s}")
+            logging.info(f"[Волна {w}] Выдан рюкзак в точке {s}")
 
         self.wave += 1
+
 
     def step(self, action):
         self.game.make_action(action, self.cfg['game']['frame_repeat'])
