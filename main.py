@@ -1,11 +1,12 @@
 from connquest import ConNquestEnv
+from vizdoom import Button
 
 env = ConNquestEnv("configs/conquest.yaml")
 obs = env.reset()
 env.spawn_wave()
 
 # Получаем индекс кнопки MOVE_FORWARD
-move_forward_idx = env.game.get_available_buttons().index(env.game.get_button("MOVE_FORWARD"))
+move_forward_idx = env.game.get_available_buttons().index(Button.MOVE_FORWARD)
 
 done = False
 while not done:
