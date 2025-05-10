@@ -19,8 +19,8 @@
 
 | Превью |     |     |
 |--------|-----|-----|
-| ![screen1](images/screen1.jpg) | ![screen2](images/screen2.jpg) | ![screen3](images/screen3.jpg) |
-| ![screen4](images/screen4.jpg) | ![screen5](images/screen5.jpg) |     |
+| ![screen1](images/screen1.png) | ![screen2](images/screen2.png) | ![screen3](images/screen3.png) |
+| ![screen4](images/screen4.png) | ![screen5](images/screen5.png) |     |
 
 ## Структура проекта
 
@@ -30,11 +30,11 @@ project/
 ├── config.yaml            # Конфигурационный YAML
 ├── ConNquest.wad          # Кастомная карта
 ├── images/
-│   ├── screen1.jpg
-│   ├── screen2.jpg
-│   ├── screen3.jpg
-│   ├── screen4.jpg
-│   └── screen5.jpg
+│   ├── screen1.png
+│   ├── screen2.png
+│   ├── screen3.png
+│   ├── screen4.png
+│   └── screen5.png
 ```
 
 ## Использование
