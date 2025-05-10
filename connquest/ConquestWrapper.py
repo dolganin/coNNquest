@@ -73,11 +73,16 @@ class ConNquestEnv:
         tier = min(w // C['wave']['waves_per_tier'] + 1, len(C['monsters']))
         max_mobs = min(C['wave']['init_mobs'] + w * C['wave']['mobs_per_wave'], C['wave']['max_mobs'])
 
+        dist_type = self.cfg.get("distribution", {}).get("type", "weighted")
         pool = []
         for t in range(1, tier + 1):
             pool += C['monsters'][f"tier{t}"]
-        weights = [1 + (i // len(pool) + 1 == tier) * C['wave']['tier_bonus'] for i in range(len(pool))]
-        mobs = self._weighted_sample(pool, weights, max_mobs)
+
+        if dist_type == "uniform":
+            mobs = random.sample(pool, min(max_mobs, len(pool)))
+        else:
+            weights = [1 + (i // len(pool) + 1 == tier) * C['wave']['tier_bonus'] for i in range(len(pool))]
+            mobs = self._weighted_sample(pool, weights, max_mobs)
 
         total_hp = sum(C['monster_hp'][m] for m in mobs)
         ammo_potential = 0
@@ -144,10 +149,10 @@ class ConNquestEnv:
         obs = None if done else self.game.get_state().screen_buffer
 
         info = {
-        "wave": self.wave,
-        "kills": self.prev_kills,
-        "items": self.prev_items,
-        "health": self.prev_health
+            "wave": self.wave,
+            "kills": self.prev_kills,
+            "items": self.prev_items,
+            "health": self.prev_health
         }
 
         return obs, reward, done, info
