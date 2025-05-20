@@ -164,3 +164,20 @@ class ConNquestEnv:
         }
 
         return obs, reward, done, info
+
+    def new_episode(self):
+        """Метод для начала нового эпизода"""
+        return self.reset()
+    
+    def get_state(self):
+        """Возвращает текущее состояние игры (например, экранный буфер)"""
+        return self.game.get_state()
+    
+    def make_action(self, action, frame_repeat):
+        return self.game.make_action(action, frame_repeat)
+    
+    def is_episode_finished(self):
+        return self.game.is_episode_finished()
+    
+    def get_total_reward(self):
+        return self.game.get_total_reward()
