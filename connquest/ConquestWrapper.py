@@ -1,6 +1,7 @@
 import random
 import yaml
 import logging
+import os
 from vizdoom import (
     DoomGame, GameVariable, Button, Mode,
     ScreenResolution, ScreenFormat
@@ -9,12 +10,18 @@ from vizdoom import (
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 class ConNquestEnv:
-    def __init__(self, cfg_path):
+    def __init__(self, cfg_path="../configs/conquest.yaml"):
+        cfg_path = os.path.abspath(cfg_path)
         with open(cfg_path) as f:
             self.cfg = yaml.safe_load(f)
 
+        cfg_dir = os.path.dirname(cfg_path)  # ← путь до папки с yaml
+
         C = self.cfg['game']
+        wad_path = os.path.join(cfg_dir, C['wad'])  # ← абсолютный путь
         self.game = DoomGame()
+        self.game.set_doom_scenario_path(wad_path)
+
         self.game.set_doom_scenario_path(C['wad'])
         self.game.set_doom_map(C.get('map', "MAP01"))
         self.game.set_window_visible(C.get('window_visible', False))
