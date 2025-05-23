@@ -145,8 +145,15 @@ wave:
   initial_far: 8
   extra_far: 8
   backpack_interval: 10
-  extra_ammo_type: "CellPack"
-  extra_pack_damage: 200
+  extra_ammo_type:
+    - type: "ShellBox"
+      min_damage: 35
+    - type: "CellPack"
+      min_damage: 5
+    - type: "CellPack"
+      min_damage: 100
+
+
 
 rewards:
   kill: 0.9

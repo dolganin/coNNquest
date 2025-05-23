@@ -121,16 +121,29 @@ class ConNquestEnv:
             bot_cls = random.choice(B['classes'])
             spot    = random.choice(cfg['spots']['ring'])
             self.game.send_game_command(f"summon {bot_cls} {spot}")
-            logging.info(f"[Волна {w}] Bot {bot_cls} skill={skill} spawned at {spot}")
+            logging.info(f"[Волна {w}] Бот {bot_cls} skill={skill} в точке {spot}")
             mobs.append(bot_cls)
 
         if ammo_pot < total_hp:
             deficit = total_hp - ammo_pot
-            packs = max(1, deficit // cfg['wave']['extra_pack_damage'])
-            for _ in range(packs):
+            extra_types = cfg['wave']['extra_ammo_type']
+            is_list = isinstance(extra_types, list)
+
+            added = 0
+            while added < deficit:
                 spot = random.choice(cfg['spots']['ring'])
-                self.game.send_game_command(f"give {cfg['wave']['extra_ammo_type']} {spot}")
-                logging.info(f"[Волна {w}] Добавлен экстренный патрон {cfg['wave']['extra_ammo_type']}")
+                if is_list:
+                    choice = random.choice(extra_types)
+                    ammo_type = choice['type']
+                    damage = choice['min_damage']
+                else:
+                    ammo_type = extra_types
+                    damage = cfg['wave'].get('extra_pack_damage', 100)  # fallback
+                self.game.send_game_command(f"give {ammo_type} {spot}")
+                logging.info(f"[Волна {w}] Экстренно {ammo_type} (+~{damage} урона)")
+                added += damage
+
+
 
         # спаун монстров
         zones = (["near"] * (len(mobs)//2+1) + ["ring"] * (len(mobs)//3)
