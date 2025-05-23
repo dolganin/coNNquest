@@ -20,16 +20,15 @@ class ConNquestEnv:
             self.cfg = yaml.safe_load(f)
 
         cfg_dir = os.path.dirname(cfg_path)  # ← путь до папки с yaml
-        if extra_args:
-            self.game.add_game_args(extra_args)
 
         C = self.cfg['game']
-        wad_path = os.path.join(cfg_dir, C['wad'])  # ← абсолютный путь
+        cfg_dir = os.path.dirname(cfg_path)       # ← где лежит conquest.yaml
+        wad_rel = self.cfg['game']['wad']         # ← "maps/CoNNquest.wad"
+        wad_path = os.path.join(cfg_dir+"/../", wad_rel) # ← абсолютный путь к .wad
+
         self.game = DoomGame()
         self.game.set_doom_scenario_path(wad_path)
         self.disable_monsters = disable_monsters
-
-        self.game.set_doom_scenario_path(C['wad'])
         self.game.set_doom_map(C.get('map', "MAP01"))
         self.game.set_window_visible(C.get('window_visible', False))
         self.game.set_screen_resolution(getattr(ScreenResolution, C['screen_resolution']))
@@ -47,6 +46,8 @@ class ConNquestEnv:
         self.game.set_available_buttons([getattr(Button, b) for b in C['available_buttons']])
         self.game.set_available_game_variables([getattr(GameVariable, v) for v in C['available_game_variables']])
         self.bots = self.cfg.get("bots", {})
+        if extra_args:
+            self.game.add_game_args(extra_args)
         self.game.init()
 
         random.seed(C.get('seed', None))
