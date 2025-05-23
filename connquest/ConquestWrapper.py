@@ -44,6 +44,7 @@ class ConNquestEnv:
         self.game.set_death_penalty(self.cfg['rewards']['death_penalty'])
         self.game.set_available_buttons([getattr(Button, b) for b in C['available_buttons']])
         self.game.set_available_game_variables([getattr(GameVariable, v) for v in C['available_game_variables']])
+        self.bots = self.cfg.get("bots", {})
         self.game.init()
 
         random.seed(C.get('seed', None))
@@ -71,6 +72,7 @@ class ConNquestEnv:
         w = self.wave
         cfg = self.cfg
         # вычисляем новое оружие
+        B = self.bots
         wtier = min((w + 1) // cfg['wave']['weap_step'], len(cfg['weapons']))
         new_weaps = cfg['weapons'].get(f"tier{wtier}", [])
 
@@ -109,6 +111,18 @@ class ConNquestEnv:
             for wp in new_weaps
         )
         logging.info(f"[Волна {w}] HP врагов: {total_hp}, урон боеприпасов: {ammo_pot}")
+
+        if B and w >= B['start_wave'] and (w - B['start_wave']) % B['interval'] == 0:
+            skill = min(
+                B['skill_base'] + ((w - B['start_wave'])//B['interval'])*B['skill_step'],
+                B['max_skill']
+            )
+            self.game.send_game_command(f"skill {skill}")
+            bot_cls = random.choice(B['classes'])
+            spot    = random.choice(cfg['spots']['ring'])
+            self.game.send_game_command(f"summon {bot_cls} {spot}")
+            logging.info(f"[Волна {w}] Bot {bot_cls} skill={skill} spawned at {spot}")
+            mobs.append(bot_cls)
 
         if ammo_pot < total_hp:
             deficit = total_hp - ammo_pot

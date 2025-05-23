@@ -48,6 +48,8 @@ monsters:
   tier4: ["Cacodemon","HellKnight","Revenant"]
   tier5: ["Arachnotron","Mancubus","PainElemental"]
   tier6: ["BaronOfHell","Archvile"]
+  tier7: ["MarineShotgun","MarineChaingun",
+          "MarinePlasma","MarineRocket","MarineBFG10K"]   # «игрок-боты»
 
 monster_hp:
   Zombieman: 20
@@ -64,6 +66,11 @@ monster_hp:
   PainElemental: 400
   BaronOfHell: 1000
   Archvile: 700
+  MarineShotgun:   200
+  MarineChaingun:  200
+  MarinePlasma:    300
+  MarineRocket:    250
+  MarineBFG10K:    400
 
 weapons:
   tier0: ["Fist"]
@@ -116,6 +123,15 @@ ammo:
 health: ["Stimpack","Medikit","SoulSphere"]
 armor:  ["GreenArmor","BlueArmor","Megasphere"]
 
+
+bots:                     # правила появления «Marine*»
+  start_wave: 6           # начинаем после 5-й волны
+  interval: 4             # каждые 4 волны
+  skill_base: 2           # минимальный skill
+  skill_step: 1           # +1 к skill каждые interval
+  max_skill: 5            # потолок
+  classes: ["MarineShotgun","MarineChaingun",
+            "MarinePlasma","MarineRocket","MarineBFG10K"]
 wave:
   waves_per_tier: 5
   init_mobs: 6
