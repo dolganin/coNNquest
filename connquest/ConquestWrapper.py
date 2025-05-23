@@ -13,13 +13,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
 class ConNquestEnv:
-    def __init__(self, cfg_path=None, disable_monsters=False):
+    def __init__(self, cfg_path=None, disable_monsters=False, extra_args: str = ""):
         # cfg_path по-умолчанию рядом с этим файлом
         cfg_path = os.path.abspath(cfg_path or os.path.join(BASE_DIR, "../configs/conquest.yaml"))
         with open(cfg_path) as f:
             self.cfg = yaml.safe_load(f)
 
         cfg_dir = os.path.dirname(cfg_path)  # ← путь до папки с yaml
+        if extra_args:
+            self.game.add_game_args(extra_args)
 
         C = self.cfg['game']
         wad_path = os.path.join(cfg_dir, C['wad'])  # ← абсолютный путь
