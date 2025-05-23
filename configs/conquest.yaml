@@ -2,7 +2,7 @@ distribution:
   type: "weighted"  # варианты: "uniform", "weighted"
 
 game:
-  wad: "coNNquest/maps/CoNNquest.wad"
+  wad: "maps/CoNNquest.wad"
   map: "MAP01"
   seed: 42
   frame_repeat: 4
