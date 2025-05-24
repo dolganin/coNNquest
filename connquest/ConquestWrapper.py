@@ -236,3 +236,11 @@ class ConNquestEnv:
 
     def close(self):
         return self.game.close()
+
+    def reset_stats(self):
+        """Сброс статистик без перезапуска эпизода"""
+        self.prev_kills = self.game.get_game_variable(GameVariable.KILLCOUNT)
+        self.prev_items = self.game.get_game_variable(GameVariable.ITEMCOUNT)
+        self.prev_health = self.game.get_game_variable(GameVariable.HEALTH)
+        self.prev_ammo = {a: 0 for a in self.cfg['ammo'].keys()}
+        logging.info(f"[STATS] Статистика сброшена: kills={self.prev_kills}, items={self.prev_items}, health={self.prev_health}")
