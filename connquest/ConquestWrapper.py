@@ -236,3 +236,7 @@ class ConNquestEnv:
     
     def get_total_reward(self):
         return self.game.get_total_reward()
+
+    def close(self):
+        return self.game.close()
+
