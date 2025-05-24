@@ -42,9 +42,9 @@ spots:
   far: [1,2,3,4,5,6,16,17,18,19,20,21,30,31,32,33,34,35,36,37,38,39,40]
 
 monsters:
-  tier1: ["Zombieman"]
-  tier2: ["ShotgunGuy","Imp"]
-  tier3: ["Demon","Spectre","LostSoul"]
+  tier1: ["Zombieman","Imp"]
+  tier2: ["Demon","ShotgunGuy"]
+  tier3: ["Spectre","LostSoul"]
   tier4: ["Cacodemon","HellKnight","Revenant"]
   tier5: ["Arachnotron","Mancubus","PainElemental"]
   tier6: ["BaronOfHell","Archvile"]
