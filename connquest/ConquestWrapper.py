@@ -114,11 +114,22 @@ class ConNquestEnv:
         logging.info(f"[Волна {w}] Призыв врагов: {mobs or 'нет'}")
     
         total_hp = sum(cfg['monster_hp'].get(m, 0) for m in mobs)
-        ammo_pot = sum(
+    
+        # Урон по умолчанию от пистолета игрока (50 патронов × min_damage)
+        pistol_ammo = 50
+        pistol_type = cfg['wave'].get('default_weapon_type', 'Clip')
+        pistol_damage = cfg['ammo'].get(pistol_type, {}).get('min_damage', 5)
+        base_ammo_pot = pistol_ammo * pistol_damage
+    
+        # Урон от выдаваемых паков
+        bonus_ammo_pot = sum(
             cfg['ammo'].get(wp, {}).get('packs', 0) * cfg['ammo'].get(wp, {}).get('min_damage', 0)
             for wp in new_weaps
         )
-        logging.info(f"[Волна {w}] HP врагов: {total_hp}, урон боеприпасов: {ammo_pot}")
+    
+        ammo_pot = base_ammo_pot + bonus_ammo_pot
+    
+        logging.info(f"[Волна {w}] HP врагов: {total_hp}, урон боеприпасов: {ammo_pot} (включая пистолет)")
     
         if B and w >= B['start_wave'] and (w - B['start_wave']) % B['interval'] == 0:
             skill = min(B['skill_base'] + ((w - B['start_wave']) // B['interval']) * B['skill_step'], B['max_skill'])
@@ -147,7 +158,6 @@ class ConNquestEnv:
                 logging.info(f"[Волна {w}] Экстренно {ammo_type} (+~{damage} урона)")
                 added += damage
     
-        # Распределение мобов по зонам с fallback на следующую зону
         priority_zones = ["near", "ring", "far"]
         for m in mobs:
             placed = False
@@ -188,6 +198,7 @@ class ConNquestEnv:
             logging.info(f"[Волна {w}] Выдан рюкзак")
     
         self.wave += 1
+
 
     def step(self, action):
         self.game.make_action(action, self.cfg['game']['frame_repeat'])
@@ -246,4 +257,5 @@ class ConNquestEnv:
         self.prev_health = self.game.get_game_variable(GameVariable.HEALTH)
         self.prev_ammo = {a: 0 for a in self.cfg['ammo'].keys()}
         logging.info(f"[STATS] Статистика сброшена: kills={self.prev_kills}, items={self.prev_items}, health={self.prev_health}")
+        self.game.new_episode()
         return self.game.get_state().screen_buffer
