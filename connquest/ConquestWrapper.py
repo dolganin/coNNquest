@@ -45,6 +45,7 @@ class ConNquestEnv:
         self.bots = self.cfg.get("bots", {})
         if extra_args:
             self.game.add_game_args(extra_args)
+        self.game.add_game_args("+skill 4")  # Уровень сложности: Nightmare!
         self.game.init()
 
         random.seed(C.get('seed', None))
