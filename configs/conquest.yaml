@@ -7,7 +7,7 @@ game:
   seed: 42
   frame_repeat: 4
   start_health: 100
-  window_visible: true
+  window_visible: false
   screen_resolution: "RES_320X240"
   screen_format: "CRCGCB"
   render_hud: true
