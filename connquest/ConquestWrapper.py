@@ -106,7 +106,7 @@ class ConNquestEnv:
             return
     
         tier = min(w // cfg['wave']['waves_per_tier'] + 1, len(cfg['monsters']))
-        max_mobs = min(cfg['wave']['init_mobs'] + w * 3, cfg['wave']['max_mobs'])
+        max_mobs = min(cfg['wave']['init_mobs'] + w * 10, cfg['wave']['max_mobs'])
         template = []
         for t in range(1, tier + 1):
             moblist = cfg['monsters'].get(f"tier{t}", [])
