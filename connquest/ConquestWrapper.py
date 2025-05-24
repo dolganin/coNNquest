@@ -246,3 +246,4 @@ class ConNquestEnv:
         self.prev_health = self.game.get_game_variable(GameVariable.HEALTH)
         self.prev_ammo = {a: 0 for a in self.cfg['ammo'].keys()}
         logging.info(f"[STATS] Статистика сброшена: kills={self.prev_kills}, items={self.prev_items}, health={self.prev_health}")
+        return self.game.get_state().screen_buffer
