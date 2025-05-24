@@ -45,7 +45,7 @@ class ConNquestEnv:
         self.bots = self.cfg.get("bots", {})
         if extra_args:
             self.game.add_game_args(extra_args)
-        self.game.add_game_args("+skill 4")  # Уровень сложности: Nightmare!
+        self.game.add_game_args("+skill 4")
         self.game.init()
 
         random.seed(C.get('seed', None))
@@ -59,15 +59,13 @@ class ConNquestEnv:
         self.prev_ammo = {a: 0 for a in self.cfg['ammo'].keys()}
 
     def reset_waves(self):
-        """Ручной сброс счётчика волн"""
         self.wave = 1
 
     def reset(self):
         self.game.new_episode()
         self.game.send_game_command("removeall")
         self._reset_state()
-        self.spawn_wave()
-        logging.info(f"=== Новый эпизод начат. Активна волна {self.wave - 1} ===")
+        logging.info("=== Новый эпизод начат ===")
         return self.game.get_state().screen_buffer
 
     def _pick_spots(self, zone, n):
@@ -75,11 +73,15 @@ class ConNquestEnv:
         return random.sample(spots, min(n, len(spots)))
 
     def spawn_wave(self):
+        if self.game.is_player_dead():
+            logging.warning(f"[Волна {self.wave}] Игрок мёртв — волна не будет запущена.")
+            return
+
         w = self.wave
         cfg = self.cfg
         B = self.bots
 
-        self.game.send_game_command("removeall")  # Очистка арены перед волной
+        self.game.send_game_command("removeall")
         used_spots = set()
 
         wtier = min((w + 1) // cfg['wave']['weap_step'], len(cfg['weapons']))
@@ -184,7 +186,6 @@ class ConNquestEnv:
             logging.info(f"[Волна {w}] Выдан рюкзак")
 
         self.wave += 1
-        return
 
     def step(self, action):
         self.game.make_action(action, self.cfg['game']['frame_repeat'])
