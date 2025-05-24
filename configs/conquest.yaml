@@ -73,9 +73,9 @@ monster_hp:
   MarineBFG10K:    400
 
 weapons:
-  tier0: ["Chainsaw"]
+  tier0: ["Shotgun"]
   tier1: ["Pistol"]
-  tier2: ["Shotgun"]
+  tier2: ["Chainsaw"]
   tier3: ["SuperShotgun"]
   tier4: ["Chaingun","RocketLauncher"]
   tier5: ["PlasmaRifle"]
