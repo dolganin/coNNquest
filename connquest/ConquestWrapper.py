@@ -25,6 +25,7 @@ class ConNquestEnv:
         self.game = DoomGame()
         self.game.set_doom_scenario_path(wad_path)
         self.disable_monsters = disable_monsters
+        self.active_enemies = 0
         C = self.cfg['game']
         self.game.set_doom_map(C.get('map', "MAP01"))
         self.game.set_window_visible(C.get('window_visible', False))
@@ -83,6 +84,7 @@ class ConNquestEnv:
     
         self.game.send_game_command("removeall")
         used_spots = set()
+        self.wave_kill_start = self.game.get_game_variable(GameVariable.KILLCOUNT)
     
         wtier = min((w + 1) // cfg['wave']['weap_step'], len(cfg['weapons']))
         new_weaps = cfg['weapons'].get(f"tier{wtier}", [])
@@ -99,6 +101,7 @@ class ConNquestEnv:
                     spot = random.choice(cfg['spots']['near'])
                     self.game.send_game_command(f"give {ainfo.get('type')} {spot}")
                     logging.info(f"[Волна {w}] Выдан патрон {ainfo.get('type')}")
+            self.active_enemies = 0
             self.wave += 1
             return
     
@@ -111,25 +114,21 @@ class ConNquestEnv:
                 count = int(max_mobs * (0.2 if t < tier else 0.4))
                 template += random.choices(moblist, k=count)
         mobs = template[:max_mobs]
+        self.active_enemies = len(mobs)
         logging.info(f"[Волна {w}] Призыв врагов: {mobs or 'нет'}")
     
-        total_hp = sum(cfg['monster_hp'].get(m, 0) for m in mobs)
-    
-        # Урон по умолчанию от пистолета игрока (50 патронов × min_damage)
+        # Подсчёт урона (включая пистолет игрока)
         pistol_ammo = 50
         pistol_type = cfg['wave'].get('default_weapon_type', 'Clip')
         pistol_damage = cfg['ammo'].get(pistol_type, {}).get('min_damage', 5)
         base_ammo_pot = pistol_ammo * pistol_damage
-    
-        # Урон от выдаваемых паков
         bonus_ammo_pot = sum(
             cfg['ammo'].get(wp, {}).get('packs', 0) * cfg['ammo'].get(wp, {}).get('min_damage', 0)
             for wp in new_weaps
         )
-    
+        total_hp = sum(cfg['monster_hp'].get(m, 0) for m in mobs)
         ammo_pot = base_ammo_pot + bonus_ammo_pot
-    
-        logging.info(f"[Волна {w}] HP врагов: {total_hp}, урон боеприпасов: {ammo_pot} (включая пистолет)")
+        logging.info(f"[Волна {w}] HP врагов: {total_hp}, урон боеприпасов: {ammo_pot}")
     
         if B and w >= B['start_wave'] and (w - B['start_wave']) % B['interval'] == 0:
             skill = min(B['skill_base'] + ((w - B['start_wave']) // B['interval']) * B['skill_step'], B['max_skill'])
@@ -137,8 +136,9 @@ class ConNquestEnv:
             spot = random.choice(cfg['spots']['ring'])
             self.game.send_game_command(f"skill {skill}")
             self.game.send_game_command(f"summon {bot_cls} {spot}")
-            logging.info(f"[Волна {w}] Бот {bot_cls} skill={skill} в точке {spot}")
             mobs.append(bot_cls)
+            self.active_enemies += 1
+            logging.info(f"[Волна {w}] Бот {bot_cls} skill={skill} в точке {spot}")
     
         if ammo_pot < total_hp:
             deficit = total_hp - ammo_pot
@@ -158,6 +158,7 @@ class ConNquestEnv:
                 logging.info(f"[Волна {w}] Экстренно {ammo_type} (+~{damage} урона)")
                 added += damage
     
+        # Распределение мобов
         priority_zones = ["near", "ring", "far"]
         for m in mobs:
             placed = False
@@ -198,38 +199,44 @@ class ConNquestEnv:
             logging.info(f"[Волна {w}] Выдан рюкзак")
     
         self.wave += 1
-
-
+    
+    
+    # ОБНОВИ step:
     def step(self, action):
         self.game.make_action(action, self.cfg['game']['frame_repeat'])
         reward = self.game.get_last_reward()
-
+    
         k = self.game.get_game_variable(GameVariable.KILLCOUNT)
         reward += (k - self.prev_kills) * self.cfg['rewards']['kill']
         self.prev_kills = k
-
+    
         it = self.game.get_game_variable(GameVariable.ITEMCOUNT)
         reward += (it - self.prev_items) * self.cfg['rewards']['item']
         self.prev_items = it
-
+    
         h = self.game.get_game_variable(GameVariable.HEALTH)
         if h > self.prev_health:
             reward += (h - self.prev_health) * self.cfg['rewards']['health']
         self.prev_health = h
-
+    
+        # Авто-запуск следующей волны
+        if not self.game.is_player_dead() and (k - getattr(self, 'wave_kill_start', 0)) >= self.active_enemies and self.active_enemies > 0:
+            logging.info(f"[STEP] Все {self.active_enemies} врагов убиты — запускаем следующую волну.")
+            self.spawn_wave()
+    
         done = self.game.is_episode_finished()
         if done and not self.game.is_player_dead():
             reward += self.cfg['rewards']['wave']
-
+    
         obs = None if done else self.game.get_state().screen_buffer
-
+    
         info = {
             "wave": self.wave,
             "kills": self.prev_kills,
             "items": self.prev_items,
             "health": self.prev_health
         }
-
+    
         return obs, reward, done, info
 
     def new_episode(self):
