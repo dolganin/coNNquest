@@ -159,20 +159,40 @@ class ConNquestEnv:
                 added += damage
     
         # Распределение мобов
-        priority_zones = ["near", "ring", "far"]
-        for m in mobs:
-            placed = False
-            for zone in priority_zones:
-                available = [s for s in cfg['spots'][zone] if s not in used_spots]
-                if available:
-                    spot = random.choice(available)
-                    used_spots.add(spot)
-                    self.game.send_game_command(f"summon {m} {spot}")
-                    logging.info(f"[Волна {w}] {m} в зоне {zone} ({spot})")
-                    placed = True
-                    break
-            if not placed:
-                logging.warning(f"[Волна {w}] Нет свободных точек для {m} — пропуск")
+# распределение 80% в near/ring и 20% в far, при этом в far — приоритет high-tier
+        tier_map = {m: int(t.replace('tier','')) for t,ml in cfg['monsters'].items() for m in ml}
+        max_t = max(tier_map.values())
+        n = len(mobs)
+        cnt_far = max(1, int(n * 0.2))
+        high = [m for m in mobs if tier_map.get(m,0) == max_t]
+        if len(high) >= cnt_far:
+            far = random.sample(high, cnt_far)
+        else:
+            rest = [m for m in mobs if m not in high]
+            far = high + random.sample(rest, cnt_far - len(high))
+        low = [m for m in mobs if m not in far]
+        
+        for m in far:
+            spots = [s for s in cfg['spots']['far'] if s not in used_spots]
+            if not spots:
+                logging.warning(f"[Волна {w}] Нет точек в far для {m}")
+                continue
+            spot = random.choice(spots)
+            used_spots.add(spot)
+            self.game.send_game_command(f"summon {m} {spot}")
+            logging.info(f"[Волна {w}] {m} (high-tier) в far ({spot})")
+        
+        for m in low:
+            zone = 'near' if random.random() < 0.8 else 'ring'
+            spots = [s for s in cfg['spots'][zone] if s not in used_spots]
+            if not spots:
+                logging.warning(f"[Волна {w}] Нет точек в {zone} для {m}")
+                continue
+            spot = random.choice(spots)
+            used_spots.add(spot)
+            self.game.send_game_command(f"summon {m} {spot}")
+            logging.info(f"[Волна {w}] {m} в зоне {zone} ({spot})")
+
     
         for wp in new_weaps:
             spot = random.choice(cfg['spots']['near'])
