@@ -239,7 +239,6 @@ class ConNquestEnv:
             reward += (h - self.prev_health) * self.cfg['rewards']['health']
         self.prev_health = h
     
-        # Авто-запуск следующей волны
         if not self.game.is_player_dead() and (k - getattr(self, 'wave_kill_start', 0)) >= self.active_enemies and self.active_enemies > 0:
             logging.info(f"[STEP] Все {self.active_enemies} врагов убиты — запускаем следующую волну.")
             self.spawn_wave()
@@ -247,6 +246,14 @@ class ConNquestEnv:
         done = self.game.is_episode_finished()
         if done and not self.game.is_player_dead():
             reward += self.cfg['rewards']['wave']
+    
+        # ограничение реворда
+        if reward > 200:
+            logging.warning(f"[STEP] reward слишком большой: {reward:.2f} → обрезан до 200")
+            reward = 200.0
+        elif reward < -200:
+            logging.warning(f"[STEP] reward слишком маленький: {reward:.2f} → обрезан до -200")
+            reward = -200.0
     
         obs = None if done else self.game.get_state().screen_buffer
     
@@ -258,6 +265,7 @@ class ConNquestEnv:
         }
     
         return obs, reward, done, info
+
 
     def new_episode(self):
         return self.reset()
