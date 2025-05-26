@@ -13,8 +13,8 @@ echo "Активация виртуального окружения..."
 source .venv/bin/activate
 
 echo "Установка зависимостей с обходом PEP 668..."
-pip3 install --upgrade pip --break-system-packages
-pip3 install -r requirements.txt --break-system-packages
+pip3 install --upgrade pip 
+pip3 install -r requirements.txt
 
 echo "Запуск main.py..."
 python3 main.py
