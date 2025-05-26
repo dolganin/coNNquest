@@ -12,6 +12,20 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
+MON_SCRIPTS = {
+    "ZombieMan":        101, "ShotgunGuy":     102, "ChaingunGuy":   103,
+    "DoomImp":          104, "Demon":           105, "Spectre":       106,
+    "LostSoul":         107, "Cacodemon":       108, "HellKnight":    109,
+    "BaronOfHell":      110, "Revenant":        111, "Arachnotron":   112,
+    "Mancubus":         113, "PainElemental":   114, "Archvile":      115,
+    "SpiderMastermind": 116, "Cyberdemon":      117, "WolfensteinSS": 118,
+    "Keen":             119,
+    "MarineFist":       120, "MarinePistol":    121, "MarineShotgun": 122,
+    "MarineSSG":        123, "MarineChaingun":  124, "MarineRocket":  125,
+    "MarinePlasma":     126, "MarineBFG":       127, "MarineChainsaw":128,
+    "MarineRailgun":    129,
+}
+
 class ConNquestEnv:
     def __init__(self, cfg_path=None, disable_monsters=False, extra_args: str = ""):
         cfg_path = os.path.abspath(cfg_path or os.path.join(BASE_DIR, "../configs/conquest.yaml"))
@@ -78,26 +92,23 @@ class ConNquestEnv:
             logging.warning(f"[Волна {self.wave}] Игрок мёртв — волна не будет запущена.")
             return
     
-        w = self.wave
-        cfg = self.cfg
-        B = self.bots
-    
+        w, cfg, B = self.wave, self.cfg, self.bots
         self.game.send_game_command("removeall")
         used_spots = set()
         self.wave_kill_start = self.game.get_game_variable(GameVariable.KILLCOUNT)
     
-        wtier = min((w + 1) // cfg['wave']['weap_step'], len(cfg['weapons']))
+        # выдача оружия без мобов
+        wtier = min((w + 1)//cfg['wave']['weap_step'], len(cfg['weapons']))
         new_weaps = cfg['weapons'].get(f"tier{wtier}", [])
-    
-        all_monsters = [m for tier in cfg.get('monsters', {}).values() for m in tier]
+        all_monsters = [m for tier in cfg.get('monsters',{}).values() for m in tier]
         if self.disable_monsters or not all_monsters:
             for wp in new_weaps:
                 spot = random.choice(cfg['spots']['near'])
                 self.game.send_game_command(f"give {wp} {spot}")
                 logging.info(f"[Волна {w}] Выдано оружие {wp} (без монстров)")
             for wp in new_weaps:
-                ainfo = cfg['ammo'].get(wp, {})
-                for _ in range(ainfo.get('packs', 0)):
+                ainfo = cfg['ammo'].get(wp,{})
+                for _ in range(ainfo.get('packs',0)):
                     spot = random.choice(cfg['spots']['near'])
                     self.game.send_game_command(f"give {ainfo.get('type')} {spot}")
                     logging.info(f"[Волна {w}] Выдан патрон {ainfo.get('type')}")
@@ -105,115 +116,118 @@ class ConNquestEnv:
             self.wave += 1
             return
     
-        tier = min(w // cfg['wave']['waves_per_tier'] + 1, len(cfg['monsters']))
-        max_mobs = min(cfg['wave']['init_mobs'] + w * 10, cfg['wave']['max_mobs'])
+        # формируем список мобов
+        tier = min(w//cfg['wave']['waves_per_tier']+1, len(cfg['monsters']))
+        max_mobs = min(cfg['wave']['init_mobs']+w*10, cfg['wave']['max_mobs'])
         template = []
-        for t in range(1, tier + 1):
+        for t in range(1, tier+1):
             moblist = cfg['monsters'].get(f"tier{t}", [])
             if moblist:
-                count = int(max_mobs * (0.2 if t < tier else 0.4))
-                template += random.choices(moblist, k=count)
+                cnt = int(max_mobs*(0.2 if t<tier else 0.4))
+                template += random.choices(moblist, k=cnt)
         mobs = template[:max_mobs]
         self.active_enemies = len(mobs)
         logging.info(f"[Волна {w}] Призыв врагов: {mobs or 'нет'}")
     
-        # Подсчёт урона (включая пистолет игрока)
-        pistol_ammo = 50
-        pistol_type = cfg['wave'].get('default_weapon_type', 'Clip')
-        pistol_damage = cfg['ammo'].get(pistol_type, {}).get('min_damage', 5)
-        base_ammo_pot = pistol_ammo * pistol_damage
-        bonus_ammo_pot = sum(
-            cfg['ammo'].get(wp, {}).get('packs', 0) * cfg['ammo'].get(wp, {}).get('min_damage', 0)
-            for wp in new_weaps
-        )
-        total_hp = sum(cfg['monster_hp'].get(m, 0) for m in mobs)
-        ammo_pot = base_ammo_pot + bonus_ammo_pot
+        # расчёт HP vs боеприпасы
+        pistol_ammo   = 50
+        pistol_type   = cfg['wave'].get('default_weapon_type','Clip')
+        pistol_dmg    = cfg['ammo'].get(pistol_type,{}).get('min_damage',5)
+        base_ammo_pot = pistol_ammo * pistol_dmg
+        bonus_ammo_pot= sum(cfg['ammo'].get(wp,{}).get('packs',0) *
+                            cfg['ammo'].get(wp,{}).get('min_damage',0)
+                            for wp in new_weaps)
+        total_hp = sum(cfg['monster_hp'].get(m,0) for m in mobs)
+        ammo_pot  = base_ammo_pot + bonus_ammo_pot
         logging.info(f"[Волна {w}] HP врагов: {total_hp}, урон боеприпасов: {ammo_pot}")
     
-        if B and w >= B['start_wave'] and (w - B['start_wave']) % B['interval'] == 0:
-            skill = min(B['skill_base'] + ((w - B['start_wave']) // B['interval']) * B['skill_step'], B['max_skill'])
-            bot_cls = random.choice(B['classes'])
-            spot = random.choice(cfg['spots']['ring'])
+        # спавн бота
+        if B and w>=B['start_wave'] and (w-B['start_wave'])%B['interval']==0:
+            skill  = min(B['skill_base']+((w-B['start_wave'])//B['interval'])*B['skill_step'],
+                         B['max_skill'])
+            bot    = random.choice(B['classes'])
+            spot   = random.choice(cfg['spots']['ring'])
             self.game.send_game_command(f"skill {skill}")
-            self.game.send_game_command(f"summon {bot_cls} {spot}")
-            mobs.append(bot_cls)
+            sid = MON_SCRIPTS.get(bot)
+            cmd = f"puke {sid} {spot}" if sid else f"summon {bot} {spot}"
+            self.game.send_game_command(cmd)
+            mobs.append(bot)
             self.active_enemies += 1
-            logging.info(f"[Волна {w}] Бот {bot_cls} skill={skill} в точке {spot}")
+            logging.info(f"[Волна {w}] Бот {bot} skill={skill} в точке {spot}")
     
+        # экстренные боеприпасы
         if ammo_pot < total_hp:
             deficit = total_hp - ammo_pot
-            extra_types = cfg['wave']['extra_ammo_type']
-            is_list = isinstance(extra_types, list)
+            extra = cfg['wave']['extra_ammo_type']
+            is_list = isinstance(extra, list)
             added = 0
             while added < deficit:
                 spot = random.choice(cfg['spots']['ring'])
                 if is_list:
-                    choice = random.choice(extra_types)
-                    ammo_type = choice['type']
-                    damage = choice['min_damage']
+                    choice = random.choice(extra)
+                    ammo_type, dmg = choice['type'], choice['min_damage']
                 else:
-                    ammo_type = extra_types
-                    damage = cfg['wave'].get('extra_pack_damage', 100)
+                    ammo_type = extra
+                    dmg = cfg['wave'].get('extra_pack_damage',100)
                 self.game.send_game_command(f"give {ammo_type} {spot}")
-                logging.info(f"[Волна {w}] Экстренно {ammo_type} (+~{damage} урона)")
-                added += damage
+                logging.info(f"[Волна {w}] Экстренно {ammo_type} (+~{dmg} урона)")
+                added += dmg
     
-        # Распределение мобов
-# распределение 80% в near/ring и 20% в far, при этом в far — приоритет high-tier
-        tier_map = {m: int(t.replace('tier','')) for t,ml in cfg['monsters'].items() for m in ml}
+        # распределение far/near/ring
+        tier_map = {m:int(t.replace('tier',''))
+                    for t,ml in cfg['monsters'].items() for m in ml}
         max_t = max(tier_map.values())
-        n = len(mobs)
-        cnt_far = max(1, int(n * 0.2))
-        high = [m for m in mobs if tier_map.get(m,0) == max_t]
-        if len(high) >= cnt_far:
-            far = random.sample(high, cnt_far)
-        else:
-            rest = [m for m in mobs if m not in high]
-            far = high + random.sample(rest, cnt_far - len(high))
+        n, cnt_far = len(mobs), max(1,int(len(mobs)*0.2))
+        high = [m for m in mobs if tier_map.get(m,0)==max_t]
+        far = (random.sample(high,cnt_far) if len(high)>=cnt_far
+               else high+random.sample([m for m in mobs if m not in high],
+                                       cnt_far-len(high)))
         low = [m for m in mobs if m not in far]
-        
+    
         for m in far:
             spots = [s for s in cfg['spots']['far'] if s not in used_spots]
             if not spots:
                 logging.warning(f"[Волна {w}] Нет точек в far для {m}")
                 continue
-            spot = random.choice(spots)
-            used_spots.add(spot)
-            self.game.send_game_command(f"summon {m} {spot}")
-            logging.info(f"[Волна {w}] {m} (high-tier) в far ({spot})")
-        
+            spot = random.choice(spots); used_spots.add(spot)
+            sid = MON_SCRIPTS.get(m)
+            cmd = f"puke {sid} {spot}" if sid else f"summon {m} {spot}"
+            self.game.send_game_command(cmd)
+            logging.info(f"[Волна {w}] {m} (far) в {spot}")
+    
         for m in low:
-            zone = 'near' if random.random() < 0.8 else 'ring'
+            zone = 'near' if random.random()<0.8 else 'ring'
             spots = [s for s in cfg['spots'][zone] if s not in used_spots]
             if not spots:
                 logging.warning(f"[Волна {w}] Нет точек в {zone} для {m}")
                 continue
-            spot = random.choice(spots)
-            used_spots.add(spot)
-            self.game.send_game_command(f"summon {m} {spot}")
-            logging.info(f"[Волна {w}] {m} в зоне {zone} ({spot})")
-
+            spot = random.choice(spots); used_spots.add(spot)
+            sid = MON_SCRIPTS.get(m)
+            cmd = f"puke {sid} {spot}" if sid else f"summon {m} {spot}"
+            self.game.send_game_command(cmd)
+            logging.info(f"[Волна {w}] {m} ({zone}) в {spot}")
     
+        # выдача оружия и аптечек
         for wp in new_weaps:
             spot = random.choice(cfg['spots']['near'])
             self.game.send_game_command(f"give {wp} {spot}")
             logging.info(f"[Волна {w}] Выдано оружие {wp}")
         for wp in new_weaps:
-            packs = cfg['ammo'].get(wp, {}).get('packs', 0)
-            ammo_type = cfg['ammo'].get(wp, {}).get('type')
+            packs = cfg['ammo'].get(wp,{}).get('packs',0)
+            ammo_type = cfg['ammo'].get(wp,{}).get('type')
             for _ in range(packs):
                 spot = random.choice(cfg['spots']['near'])
                 self.game.send_game_command(f"give {ammo_type} {spot}")
                 logging.info(f"[Волна {w}] Выдан патрон {ammo_type}")
     
-        if w % cfg['wave']['health_interval'] == 0:
-            items = random.sample(cfg['health'], cfg['wave']['health_count']) \
-                  + random.sample(cfg['armor'], cfg['wave']['armor_count'])
+        if w % cfg['wave']['health_interval']==0:
+            items = (random.sample(cfg['health'],cfg['wave']['health_count']) +
+                     random.sample(cfg['armor'], cfg['wave']['armor_count']))
             for it in items:
                 spot = random.choice(cfg['spots']['far'])
                 self.game.send_game_command(f"give {it} {spot}")
                 logging.info(f"[Волна {w}] Выдано {it}")
-        if w % cfg['wave']['backpack_interval'] == 0:
+        if w % cfg['wave']['backpack_interval']==0:
             spot = random.choice(cfg['spots']['ring'])
             self.game.send_game_command(f"give Backpack {spot}")
             logging.info(f"[Волна {w}] Выдан рюкзак")
